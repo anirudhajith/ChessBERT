@@ -11,7 +11,6 @@ class ChessBERT(nn.Module):
 
     def __init__(self, hidden=128, n_layers=12, attn_heads=12, dropout=0.1):
         """
-        :param vocab_size: vocab_size of total words
         :param hidden: BERT model hidden size
         :param n_layers: numbers of Transformer blocks(layers)
         :param attn_heads: number of attention heads
@@ -33,16 +32,20 @@ class ChessBERT(nn.Module):
         self.transformer_blocks = nn.ModuleList(
             [TransformerBlock(hidden, attn_heads, hidden * 4, dropout) for _ in range(n_layers)])
 
-    def forward(self, x, segment_info):
+    def forward(self, x):
+        """
+        :param x: (batch_size, seq_len, 4)
+        """
+
         # attention masking for padded token
         # torch.ByteTensor([batch_size, 1, seq_len, seq_len)
-        mask = (x > 0).unsqueeze(1).repeat(1, x.size(1), 1).unsqueeze(1)
+        mask = (x[:,:,0] > 0).unsqueeze(1).repeat(1, x.size(1), 1).unsqueeze(1)
 
         # embedding the indexed sequence to sequence of vectors
-        x = self.embedding(x, segment_info)
+        x = self.embedding(x) # (batch_size, seq_len, hidden)
 
         # running over multiple transformer blocks
         for transformer in self.transformer_blocks:
-            x = transformer.forward(x, mask)
+            x = transformer.forward(x, mask) # (batch_size, seq_len, hidden)
 
         return x

@@ -9,7 +9,7 @@ class PieceSquareEmbedding(nn.Module):
         1. PieceIDEmbedding: embedding matrix of size (32+3)x128 representing [PAD], white a pawn, white b pawn, white c pawn, ..., white, queenside rook, white queenside knight, etc., [SEP], [MASK]
         2. RowEmbedding: adding positional information about rows: [null], 1, 2, 3, ..., 8
         3. FileEmbedding: adding position information about [null], a, b, c, ..., h
-        4. SegmentEmbedding : adding board segment info about [demo board 1], [next move 1], [demo board 2], [next move 2], ..., [demo board 8], [next move 8], [query board], [query next move]
+        4. SegmentEmbedding : adding board segment info about [null], [demo board 1], [next move 1], [demo board 2], [next move 2], ..., [demo board 8], [next move 8], [query board], [query next move]
 
         sum of all these features are output of PieceSquareEmbedding
     """
@@ -33,5 +33,5 @@ class PieceSquareEmbedding(nn.Module):
         :param x: (batch_size, seq_len, 4)
         """
         pieces, rows, files, segments = x[:,:,0], x[:,:,1], x[:,:,2], x[:,:,3]
-        x = self.piece(pieces) + self.row(rows) + self.file(files) + self.segment(segments)
+        x = self.piece(pieces) + self.row(rows) + self.file(files) + self.segment(segments) # (batch_size, seq_len, hidden)
         return self.dropout(x)

@@ -7,7 +7,9 @@ class MaskedChessModel(nn.Module):
 
     def __init__(self, hidden=128, n_layers=12, attn_heads=12):
         """
-        :param hidden: output size of ChessBERT model
+        :param hidden: BERT model hidden representation size
+        :param n_layers: numbers of Transformer blocks(layers)
+        :param attn_heads: number of attention heads
         """
         super().__init__()
         self.chessbert = ChessBERT(hidden, n_layers, attn_heads)
@@ -18,11 +20,14 @@ class MaskedChessModel(nn.Module):
 
     def forward(self, x):
         """
-        :param x: (batch_size, seq_len)
+        :param x: (batch_size, seq_len, 4)
         """
         return self.chessbert(x)[:,-1,:] # (batch_size, hidden)
     
     def predict(self, x):
+        """
+        :param x: (batch_size, seq_len, 4)
+        """
         move_embedding = self.chessbert(x)[:,-1,:] - self.segment_embeddings.weight[-1,:] # (batch_size, hidden)
         piece_id = torch.argmax(move_embedding @ self.piece_embeddings.weight.T, dim=1) # (batch_size)
         row_id = torch.argmax(move_embedding @ self.row_embeddings.weight.T, dim=1) # (batch_size)
