@@ -21,6 +21,7 @@ def pgn_to_positions(pgn_file, save_file, length_file, encoder_file, embedding_s
     index = pinecone.Index('chesspos-lichess-embeddings')
 
     encoder = tf.keras.models.load_model(encoder_file)
+    start = time.time()
     with open(pgn_file, 'r') as f:
         with h5py.File(save_file, 'a') as p:
 
@@ -28,7 +29,7 @@ def pgn_to_positions(pgn_file, save_file, length_file, encoder_file, embedding_s
                 data = p['embeddings']
                 size = data.shape[0]
             else:
-                data = p.create_dataset(f"embeddings", shape=(0, num_context + 1, dim), maxshape=(None, num_context + 1, dim), chunks=True)
+                data = p.create_dataset(f"embeddings", shape=(0, num_context + 1, dim), maxshape=(None, num_context + 1, dim), chunks=True, compression='gzip')
                 size = 0
 
             while True:
@@ -40,6 +41,7 @@ def pgn_to_positions(pgn_file, save_file, length_file, encoder_file, embedding_s
                         pickle.dump(game_lengths, p)
                     break
                 embeddings = game_embeddings(next_game, game_index, encoder, index, num_context)
+                print(game_index)
                 if len(embeddings) > 0:
                     data.resize((size + len(embeddings), num_context + 1, dim))
                     data[-len(embeddings):] = embeddings[:]
@@ -47,6 +49,7 @@ def pgn_to_positions(pgn_file, save_file, length_file, encoder_file, embedding_s
                     size += len(embeddings)
                     game_lengths.append(len(embeddings))
 
+            print(time.time() - start)
             print(data.shape)
     return 0
 
@@ -74,18 +77,22 @@ def game_embeddings(game, game_ind, encoder, index, k):
 
 
     bitboards = np.asarray(bitboards)
-    #s = time.time()
+    s = time.time()
     embeddings = np.asarray(encoder.predict_on_batch(bitboards))
-    #print(time.time() - s)
+    print("encode %f" % (time.time() - s))
+    
+    s = time.time()
+    results = index.query(queries=embeddings.tolist(), top_k = 8, include_metadata = True)
+    results = results['results']
+    print("query %f " % (time.time() - s))
         
     for i in range(len(pos)):
         context = []
-        results = index.query(vector=embeddings[i].tolist(), top_k = k, include_metadata = True)
-        results = results['matches']
+        matches = results[i]['matches'] 
 
-        for j in range(len(results)):
-            fen = results[j]['id']
-            move = results[j]['metadata']['move']
+        for j in range(len(matches)):
+            fen = matches[j]['id']
+            move = matches[j]['metadata']['move']
 
             context_board = chess.Board(fen = fen)
             context_arr = board_to_array(context_board)
