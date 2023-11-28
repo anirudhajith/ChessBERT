@@ -1,2 +1,3 @@
 *.pgn
-*.h5py
+*.hdf5
+*.txt
