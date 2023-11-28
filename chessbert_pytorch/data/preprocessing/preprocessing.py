@@ -11,7 +11,7 @@ from utils import *
 import time
 import pinecone
 
-def pgn_to_positions(pgn_file, save_file, length_file, encoder_file, embedding_size = 64):
+def pgn_to_positions(pgn_file, save_file, length_file, encoder_file, embedding_size = 64, start_index = 0):
 
     game_index = -1
     game_lengths = []
@@ -22,6 +22,7 @@ def pgn_to_positions(pgn_file, save_file, length_file, encoder_file, embedding_s
 
     encoder = tf.keras.models.load_model(encoder_file)
     start = time.time()
+
     with open(pgn_file, 'r') as f:
         with h5py.File(save_file, 'a') as p:
 
@@ -29,7 +30,7 @@ def pgn_to_positions(pgn_file, save_file, length_file, encoder_file, embedding_s
                 data = p['embeddings']
                 size = data.shape[0]
             else:
-                data = p.create_dataset(f"embeddings", shape=(0, num_context + 1, dim), maxshape=(None, num_context + 1, dim), chunks=True, compression='gzip')
+                data = p.create_dataset(f"embeddings", shape=(0, num_context + 1, dim), maxshape=(None, num_context + 1, dim), dtype = np.byte, chunks=True, compression='gzip')
                 size = 0
 
             while True:
@@ -40,14 +41,18 @@ def pgn_to_positions(pgn_file, save_file, length_file, encoder_file, embedding_s
                     with open(length_file, 'wb') as p:
                         pickle.dump(game_lengths, p)
                     break
-                embeddings = game_embeddings(next_game, game_index, encoder, index, num_context)
-                print(game_index)
-                if len(embeddings) > 0:
-                    data.resize((size + len(embeddings), num_context + 1, dim))
-                    data[-len(embeddings):] = embeddings[:]
-            
-                    size += len(embeddings)
-                    game_lengths.append(len(embeddings))
+
+                if game_index >= start_index:
+                    embeddings = game_embeddings(next_game, game_index, encoder, index, num_context)
+                    print(game_index)
+                    if len(embeddings) > 0:
+                        data.resize((size + len(embeddings), num_context + 1, dim))
+                        data[-len(embeddings):] = embeddings[:]
+                
+                        size += len(embeddings)
+                        game_lengths.append(len(embeddings))
+                        with open("progress.txt", 'w') as tmp:
+                            tmp.write(game_index)
 
             print(time.time() - start)
             print(data.shape)
@@ -82,7 +87,7 @@ def game_embeddings(game, game_ind, encoder, index, k):
     print("encode %f" % (time.time() - s))
     
     s = time.time()
-    results = index.query(queries=embeddings.tolist(), top_k = 8, include_metadata = True)
+    results = index.query(queries=embeddings.tolist(), top_k = k, include_metadata = True)
     results = results['results']
     print("query %f " % (time.time() - s))
         
@@ -100,7 +105,7 @@ def game_embeddings(game, game_ind, encoder, index, k):
 
             context.append(np.concatenate((context_arr, move_arr)))
 
-        pos[i] = np.concatenate((np.vstack(context), pos[i].reshape((1, -1))), axis = 0)
+        pos[i] = np.concatenate((np.vstack(context), pos[i].reshape((1, -1))), axis = 0).astype(np.byte)
     return pos
 
 if __name__ == '__main__':
@@ -108,5 +113,7 @@ if __name__ == '__main__':
     save_file = sys.argv[2]
     length_file = sys.argv[3]
     encoder_file = sys.argv[4]
+    start_index = int(sys.argv[5])
+
     print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
-    pgn_to_positions(pgn_file, save_file, length_file, encoder_file)
+    pgn_to_positions(pgn_file, save_file, length_file, encoder_file, start_index = start_index)
