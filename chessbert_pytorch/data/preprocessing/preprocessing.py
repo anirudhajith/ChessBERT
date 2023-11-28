@@ -37,7 +37,11 @@ def pgn_to_positions(pgn_file, save_file, progress_file, encoder_file, embedding
                 size = 0
 
             while True:
-                next_game = chess.pgn.read_game(f)
+                try:
+                    next_game = chess.pgn.read_game(f)
+                except Exception as e:
+                    print(e)
+                    continue
                 game_index += 1
 
                 if next_game is None:
@@ -87,7 +91,9 @@ def game_embeddings(game, game_ind, encoder, index, k):
             if i in sample_inds:
                 pos.append(np.concatenate((arr, mv_arr)))
                 bitboards.append(bitboard)
-
+    
+    if len(bitboards) == 0:
+        return []
 
     bitboards = np.asarray(bitboards)
     s = time.time()
@@ -100,7 +106,8 @@ def game_embeddings(game, game_ind, encoder, index, k):
         try:
             results = index.query(queries=embeddings.tolist(), top_k = k, include_metadata = True)
         except Exception as e:
-            time.sleep(1)
+            print(e)
+            time.sleep(60)
             continue
 
     results = results['results']
@@ -129,8 +136,9 @@ if __name__ == '__main__':
     encoder_file = sys.argv[4]
 
     pgn_files = glob.glob("%s/*.pgn" % (pgn_dir))
+    pgn_files.sort()
 
-    num_workers = 2
+    num_workers = 9
     workers = []
     for i in range(num_workers):
         save_file = "%s/%d.hdf5" % (save_dir, i)
