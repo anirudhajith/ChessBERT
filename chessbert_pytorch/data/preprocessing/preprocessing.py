@@ -9,13 +9,16 @@ import os
 
 from utils import *
 import time
+import glob
+import random
 import pinecone
+import multiprocessing as mp
+from multiprocessing import Process
 
-def pgn_to_positions(pgn_file, save_file, length_file, encoder_file, embedding_size = 64, start_index = 0):
+def pgn_to_positions(pgn_file, save_file, progress_file, encoder_file, embedding_size, start_index):
 
     game_index = -1
-    game_lengths = []
-    num_context = 8
+    num_context = 4
     dim = 64 + 5 + 4
     pinecone.init(api_key = '38132697-8f87-4930-a355-376bd93394a3', environment = "us-east4-gcp")
     index = pinecone.Index('chesspos-lichess-embeddings')
@@ -38,21 +41,17 @@ def pgn_to_positions(pgn_file, save_file, length_file, encoder_file, embedding_s
                 game_index += 1
 
                 if next_game is None:
-                    with open(length_file, 'wb') as p:
-                        pickle.dump(game_lengths, p)
                     break
 
                 if game_index >= start_index:
                     embeddings = game_embeddings(next_game, game_index, encoder, index, num_context)
-                    print(game_index)
                     if len(embeddings) > 0:
                         data.resize((size + len(embeddings), num_context + 1, dim))
                         data[-len(embeddings):] = embeddings[:]
                 
                         size += len(embeddings)
-                        game_lengths.append(len(embeddings))
-                        with open("progress.txt", 'w') as tmp:
-                            tmp.write(game_index)
+                        with open(progress_file, 'w') as tmp:
+                            tmp.write(str(game_index))
 
             print(time.time() - start)
             print(data.shape)
@@ -62,10 +61,17 @@ def game_embeddings(game, game_ind, encoder, index, k):
     board = chess.Board()
     pos = []
     bitboards = []
+
+    #but why is there no __len__ function????
+    l = 0
     for move in game.mainline_moves():
+        l+=1
+
+    num_samples = min(60, l)
+    sample_inds = set(random.sample(range(l), num_samples))
+    for i, move in enumerate(game.mainline_moves()):
         arr = board_to_array(board)
         bitboard = board_to_bitboard(board)
-        bitboards.append(bitboard)
 
         start = move.from_square
         end = move.to_square
@@ -78,18 +84,26 @@ def game_embeddings(game, game_ind, encoder, index, k):
             print(e)
             return pos
         else:
-            pos.append(np.concatenate((arr, mv_arr)))
+            if i in sample_inds:
+                pos.append(np.concatenate((arr, mv_arr)))
+                bitboards.append(bitboard)
 
 
     bitboards = np.asarray(bitboards)
     s = time.time()
     embeddings = np.asarray(encoder.predict_on_batch(bitboards))
-    print("encode %f" % (time.time() - s))
     
     s = time.time()
-    results = index.query(queries=embeddings.tolist(), top_k = k, include_metadata = True)
+    results = None
+
+    while results == None:
+        try:
+            results = index.query(queries=embeddings.tolist(), top_k = k, include_metadata = True)
+        except Exception as e:
+            time.sleep(1)
+            continue
+
     results = results['results']
-    print("query %f " % (time.time() - s))
         
     for i in range(len(pos)):
         context = []
@@ -109,11 +123,25 @@ def game_embeddings(game, game_ind, encoder, index, k):
     return pos
 
 if __name__ == '__main__':
-    pgn_file = sys.argv[1]
-    save_file = sys.argv[2]
-    length_file = sys.argv[3]
+    pgn_dir = sys.argv[1]
+    save_dir = sys.argv[2]
+    progress_dir = sys.argv[3]
     encoder_file = sys.argv[4]
-    start_index = int(sys.argv[5])
 
-    print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
-    pgn_to_positions(pgn_file, save_file, length_file, encoder_file, start_index = start_index)
+    pgn_files = glob.glob("%s/*.pgn" % (pgn_dir))
+
+    num_workers = 2
+    workers = []
+    for i in range(num_workers):
+        save_file = "%s/%d.hdf5" % (save_dir, i)
+        progress_file = "%s/%d.txt" % (progress_dir, i)
+        
+        workers.append(Process(target = pgn_to_positions, args = (pgn_files[i], save_file, progress_file, encoder_file, 64, 0)))
+   
+    for worker in workers:
+        worker.start()
+
+    for worker in workers:
+        worker.join()
+
+    
