@@ -9,8 +9,9 @@ queries = np.random.randn(40, 64)
 
 s = time.time()
 result = index.query(queries=queries.tolist(), top_k = 8, include_metadata = True)
-print(time.time() - s)
-print(len(result['results']))
+print(type(result))
+print(type(result['results']))
+print(type(result['results'][0]))
 
 
 

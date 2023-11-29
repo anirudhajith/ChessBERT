@@ -138,18 +138,18 @@ if __name__ == '__main__':
     pgn_files = glob.glob("%s/*.pgn" % (pgn_dir))
     pgn_files.sort()
 
-    num_workers = 9
+    num_workers = 4
     workers = []
+    start = [479, 463, 526, 496]
+
     for i in range(num_workers):
         save_file = "%s/%d.hdf5" % (save_dir, i)
         progress_file = "%s/%d.txt" % (progress_dir, i)
         
-        workers.append(Process(target = pgn_to_positions, args = (pgn_files[i], save_file, progress_file, encoder_file, 64, 0)))
+        workers.append(Process(target = pgn_to_positions, args = (pgn_files[i], save_file, progress_file, encoder_file, 64, start[i])))
    
     for worker in workers:
         worker.start()
 
     for worker in workers:
         worker.join()
-
-    
