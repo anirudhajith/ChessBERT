@@ -4,7 +4,7 @@ from torch.utils.data.dataloader import DataLoader
 from chess_dataset import ChessDataset
 from utils import *
 
-data = ChessDataset("preprocessing/sample_data/test.hdf5", "preprocessing/piece_index.json")
+data = ChessDataset("preprocessing/data/data.hdf5", "preprocessing/piece_index.json")
 train_loader = DataLoader(data, batch_size = 8, shuffle=True, collate_fn = collate_fn)
 
 for i, (x, add, y) in enumerate(train_loader):
