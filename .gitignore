@@ -1,3 +1,7 @@
 *.pgn
 *.hdf5
 *.txt
+__pycache__/
+logs/
+..ep*
+*.slurm

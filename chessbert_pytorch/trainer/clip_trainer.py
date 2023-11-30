@@ -99,7 +99,8 @@ class CLIPTrainer:
             
             # logging information.
             if train and i % self.log_freq == 0:
-                print("EP%d_%s:%d/%d, loss=%f" % (epoch, str_code, i, len(data_loader), avg_loss / (i + 1)))
+                in_batch_accuracy = (torch.argmax(input_embeddings, dim=1) == ground_truth).sum().item() / len(x)
+                print("EP%d_%s:%d/%d, loss=%f, in-batch acc=%f" % (epoch, str_code, i, len(data_loader), avg_loss / (i + 1), in_batch_accuracy))
             
         print("EP%d_%s, avg_loss=" % (epoch, str_code), avg_loss / len(data_loader))
         

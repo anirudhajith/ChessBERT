@@ -1,9 +1,5 @@
-import torch
 from torch.utils.data import Dataset
-import os
 import json
-import chess
-import pinecone
 from .utils import *
 import h5py
 

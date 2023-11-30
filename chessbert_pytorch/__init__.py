@@ -1,1 +1,1 @@
-from .model import ChessBERT
+from .model import ChessBERT, MaskedChessModel
