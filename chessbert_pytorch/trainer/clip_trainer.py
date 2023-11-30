@@ -4,6 +4,7 @@ from torch.optim import Adam
 from torch.utils.data import DataLoader
 from torch.nn import CrossEntropyLoss
 from tqdm import tqdm
+import numpy as np
 
 from model import MaskedChessModel, ChessBERT
 from .optim_schedule import ScheduledOptim
@@ -81,14 +82,19 @@ class CLIPTrainer:
 
         avg_loss = 0.0
         for i, batch in enumerate(tqdm(data_loader)):
+            batch_size = batch.shape[0]
             x, _ ,  y = batch    # (batch_size, seq_len, 4), (batch_size, 4)
             x, y = x.to(self.device), y.to(self.device)
 
+            #ignoring issue with duplicate optimal moves
             input_embeddings = self.model.chessbert.embedding(y.unsqueeze(1).to(torch.long)).squeeze(1) # (batch_size, hidden)
             output_embeddings = self.model(x) # (batch_size, hidden)
             ground_truth = torch.arange(len(x), dtype=torch.long, device=self.device)
 
-            total_loss = (self.loss_input_embeddings(input_embeddings, ground_truth) + self.loss_output_embeddings(output_embeddings, ground_truth)) / 2
+            logits_input = torch.mm(input_embeddings, output_embeddings.t()) #(batch_size, batch_size)
+            logits_output = logits_input.t()
+
+            total_loss = (self.loss_input_embeddings(logits_input, ground_truth) + self.loss_output_embeddings(logits_output, ground_truth)) / 2
 
             if train:
                 self.optim_schedule.zero_grad()
