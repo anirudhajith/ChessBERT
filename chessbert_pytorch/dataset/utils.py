@@ -1,4 +1,4 @@
-from preprocessing.utils import *
+from .preprocessing.utils import *
 import numpy as np
 import h5py
 import pickle

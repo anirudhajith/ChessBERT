@@ -21,10 +21,10 @@ class PieceSquareEmbedding(nn.Module):
         :param dropout: dropout rate
         """
         super().__init__()
-        self.piece = TokenEmbedding(vocab_size=(1+16+16+2), embed_size=embed_size)
-        self.row = nn.Embedding(vocab_size=(1+8), embed_size=embed_size, padding_idx=0)
-        self.file = nn.Embedding(vocab_size=(1+8), embed_size=embed_size, padding_idx=0)
-        self.segment = SegmentEmbedding(embed_size=self.token.embedding_dim)
+        self.piece = TokenEmbedding(1+16+16+2, embed_size)
+        self.row = nn.Embedding(1+8, embed_size, padding_idx=0)
+        self.file = nn.Embedding(1+8, embed_size, padding_idx=0)
+        self.segment = SegmentEmbedding(self.piece.embedding_dim)
         self.dropout = nn.Dropout(p=dropout)
         self.embed_size = embed_size
 
@@ -32,6 +32,6 @@ class PieceSquareEmbedding(nn.Module):
         """
         :param x: (batch_size, seq_len, 4)
         """
-        pieces, rows, files, segments = x[:,:,0], x[:,:,1], x[:,:,2], x[:,:,3]
+        pieces, rows, files, segments = x[:,:,0].int(), x[:,:,1].int(), x[:,:,2].int(), x[:,:,3].int()
         x = self.piece(pieces) + self.row(rows) + self.file(files) + self.segment(segments) # (batch_size, seq_len, hidden)
         return self.dropout(x)

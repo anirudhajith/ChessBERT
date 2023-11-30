@@ -4,7 +4,7 @@ import os
 import json
 import chess
 import pinecone
-from utils import *
+from .utils import *
 import h5py
 
 class ChessDataset(Dataset):
