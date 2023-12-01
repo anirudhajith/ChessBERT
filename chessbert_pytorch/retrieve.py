@@ -2,10 +2,13 @@ import argparse
 import json
 import random
 from stockfish import Stockfish
+import chess
 from dataset.utils import *
+from get_prediction import get_prediction_model
 
 import pinecone
 import tensorflow as tf
+import torch
 
 def evaluate(fen, candidate_moves, stockfish, k_levels):
     stockfish.set_fen_position(fen)
@@ -64,6 +67,14 @@ def eval():
     piece_index = json.load(open("dataset/preprocessing/piece_index.json", 'r'))
     encoder = tf.keras.models.load_model("dataset/preprocessing/model_encoder.h5")
 
+
+    MODEL_PATH = "/home/david/Masters/VectorCOS597A/model.ep6"
+    K = 4
+    print("Loading MaskedChessModel")
+    model = torch.load(MODEL_PATH)
+    model.to('cuda')
+    model.eval()
+
     k_levels = [1,3,5,10]
     
     trank = np.zeros(len(k_levels)) 
@@ -74,8 +85,16 @@ def eval():
 
     with open("fens.txt", 'r') as f:
         for i, fen in enumerate(f):
-            _, _, context_moves = fen_to_bag(fen, encoder, index, 64, piece_index)
-            rank, rank_random, recall, recall_random = evaluate(fen, context_moves, stockfish, k_levels)
+            board = chess.Board(fen=fen)
+            legal_moves = [move for move in board.legal_moves]
+            uci_moves = [move.uci() for move in legal_moves]
+            _, move_indexes = get_prediction_model(board.fen(), uci_moves, encoder, index, model)
+
+            real_moves = []
+            for j in range(len(move_indexes)):
+                real_moves.append(uci_moves[move_indexes[j]])
+
+            rank, rank_random, recall, recall_random = evaluate(fen, real_moves, stockfish, k_levels)
             trank += rank
             trank_random += rank_random
             trecall += recall

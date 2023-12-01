@@ -72,7 +72,7 @@ def play_game(input):
                 move = random.choice(list(board.legal_moves))
             else:
                 legal_moves = [move for move in board.legal_moves]
-                move_index = get_prediction(board.fen(), [move.uci() for move in legal_moves], model, index)
+                move_index, _ = get_prediction(board.fen(), [move.uci() for move in legal_moves], model, index)
                 move = legal_moves[move_index]
 
             board.push(move)

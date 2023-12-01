@@ -39,4 +39,21 @@ def get_prediction(current_fen, legal_move_ucis, encoder, index) -> int:
     options = model.chessbert.embedding(ys.unsqueeze(0).to(torch.long)).squeeze(0) # (num_legal_moves, hidden)
     model_prediction = model.forward(x) # (1, hidden)
     logits = torch.mm(model_prediction, options.t()) # (1, num_legal_moves)
-    return torch.argmax(logits, dim=1).item()
+    return torch.argmax(logits, dim=1).item(), torch.argsort(logits, dim=1).squeeze().numpy()
+
+def get_prediction_model(current_fen, legal_move_ucis, encoder, index, model, K=4) -> int:
+    """
+    :param current_fen: current board state
+    :param legal_move_ucis: list of legal moves
+    :param encoder: encoder for converting FEN to board state
+    :param index: index for converting FEN to board state
+    :return: index of the best move among legal moves
+    """
+    x, ys, _ = utils.fen_to_bag(current_fen, encoder, index, K, piece_index, legal_move_ucis)
+    x = torch.from_numpy(x).unsqueeze(0)
+    x = x.to("cuda")
+    ys= torch.from_numpy(ys).to("cuda") # (num_legal_moves, 4)
+    options = model.chessbert.embedding(ys.unsqueeze(0).to(torch.long)).squeeze(0) # (num_legal_moves, hidden)
+    model_prediction = model.forward(x) # (1, hidden)
+    logits = torch.mm(model_prediction, options.t()) # (1, num_legal_moves)
+    return torch.argmax(logits, dim=1).item(), torch.argsort(logits, dim=1).squeeze().cpu().numpy()
