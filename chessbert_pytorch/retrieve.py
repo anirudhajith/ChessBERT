@@ -34,8 +34,8 @@ def evaluate(fen, candidate_moves, stockfish, k_levels):
     c = 0
     for i, k in enumerate(k_levels):
         while c < k:
-            min_r = min(min_r, legal_moves[c][1])
-            min_rand = min(min_rand, random_moves[c][1])
+            min_r = min(min_r, legal_moves[c])
+            min_rand = min(min_rand, random_moves[c])
             c += 1
         ranks[i] = min_r
         rand_ranks[i] = min_rand
@@ -46,10 +46,6 @@ def evaluate(fen, candidate_moves, stockfish, k_levels):
     print(len(moves))
     print("sample " + str(random.randrange(0, len(moves))))
     '''
-    if best < 0:
-        best = random.randrange(0, len(moves)) 
-
-    return best, random.randrange(0, len(moves))
 
 def eval():
     stockfish = Stockfish("/home/david/Masters/VectorCOS597A/stockfish/stockfish-ubuntu-x86-64-avx2")
@@ -61,26 +57,27 @@ def eval():
 
     k_levels = [1,3,5,10]
     
-    tranks = np.zeros(len(k_levels)) 
+    trank = np.zeros(len(k_levels)) 
     trank_random = np.zeros(len(k_levels))
     count = 0
 
     with open("fens.txt", 'r') as f:
         for i, fen in enumerate(f):
             _, _, context_moves = fen_to_bag(fen, encoder, index, 64, piece_index)
-            rank, rank_random = evaluate(fen, context_moves, stockfish)
+            rank, rank_random = evaluate(fen, context_moves, stockfish, k_levels)
             trank += rank
             trank_random += rank_random
+            print(i)
             count += 1
 
             if i % 50 == 0:
                 print(i)
-                print("Avg rank of retrieval: %f" % (trank / count))
-                print("Avg rank of random: %f" % (trank_random / count))
+                print("Avg rank of retrieval: %s" % str(trank / count))
+                print("Avg rank of random: %s" % str(trank_random / count))
 
 
-    print("Avg rank of retrieval: %f" % (trank / count))
-    print("Avg rank of random: %f" % (trank_random / count))
+    print("Avg rank of retrieval: %s" % str(trank / count))
+    print("Avg rank of random: %s" % str(trank_random / count))
 
 
 if __name__ == '__main__':
