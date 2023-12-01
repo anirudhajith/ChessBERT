@@ -6,8 +6,9 @@ import chess
 from collections import defaultdict
 import pinecone
 import random
-
 from torch.utils.data import default_collate
+
+import chess
 
 def collate_fn(batch):
     max_len = -1
@@ -55,8 +56,60 @@ def array_to_bag(array, piece_index, segment_id):
 
                 counts[piece] += 1
 
-    assert mv_arr[0] != -1
     bag.append(mv_arr)
     bag = np.vstack(bag)
     return bag, additional
+
+#for inference only
+#returns bag format and context moves 
+def fen_to_bag(fen, encoder, index, k, piece_index):
+    board = chess.Board(fen)
+    
+    arr = board_to_array(board)
+    arr = np.concatenate((arr, np.zeros(4)))
+    bitboard = np.asarray([board_to_bitboard(board)])
+
+    embedding = np.asarray(encoder.predict_on_batch(bitboard)).squeeze()
+
+    results = index.query(vector=embedding.tolist(), top_k = k, include_metadata = True)
+    results = results['matches']
+
+    context = []
+    context_moves = []
+    for i in range(len(results)):
+        fen = results[i]['id']
+        move = results[i]['metadata']['move']
+        context_moves.append(move)
+
+        context_board = chess.Board(fen = fen)
+        context_arr = board_to_array(context_board)
+        move_arr = np.array([ord(move[0])- ord('a'), int(move[1]) - 1, ord(move[2]) - ord('a'), int(move[3]) - 1])
+
+        context.append(np.concatenate((context_arr, move_arr)))
+    data = np.concatenate((np.vstack(context), arr.reshape((1, -1))), axis=0)
+
+    x = []
+    rights = []
+    s = 0
+    for i in range(len(data)):
+        bag, add = array_to_bag(data[i], piece_index, i*2 + 1)
+        
+        s += len(bag)
+        x.append(bag)
+        rights.append(add)
+
+        if i != len(data) - 1:
+            x.append(np.array([[33, 0,0,0]]))
+    
+    truth = x[-1][-1]
+    y = truth.copy()
+
+    truth[0] = 34
+    truth[1] = 0
+    truth[2] = 0
+
+    x = np.concatenate(x, axis = 0) # (len_seq, 4)
+    rights = np.vstack(rights) # (9, 5)
+
+    return x, rights, context_moves
 
