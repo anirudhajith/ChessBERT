@@ -34,4 +34,3 @@ class MaskedChessModel(nn.Module):
         file_id = torch.argmax(move_embedding @ self.file_embeddings.weight.T, dim=1) # (batch_size)
         
         return piece_id, row_id, file_id
-

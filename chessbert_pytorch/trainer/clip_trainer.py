@@ -82,7 +82,6 @@ class CLIPTrainer:
 
         avg_loss = 0.0
         for i, batch in enumerate(tqdm(data_loader)):
-            batch_size = batch.shape[0]
             x, _ ,  y = batch    # (batch_size, seq_len, 4), (batch_size, 4)
             x, y = x.to(self.device), y.to(self.device)
 
@@ -104,8 +103,8 @@ class CLIPTrainer:
             avg_loss += total_loss.item()
             
             # logging information.
-            if train and i % self.log_freq == 0:
-                in_batch_accuracy = (torch.argmax(input_embeddings, dim=1) == ground_truth).sum().item() / len(x)
+            if (train and i % self.log_freq == 0) or not train:
+                in_batch_accuracy = (torch.argmax(logits_input, dim=1) == ground_truth).sum().item() / len(x)
                 print("EP%d_%s:%d/%d, loss=%f, in-batch acc=%f" % (epoch, str_code, i, len(data_loader), avg_loss / (i + 1), in_batch_accuracy))
             
         print("EP%d_%s, avg_loss=" % (epoch, str_code), avg_loss / len(data_loader))
@@ -124,3 +123,8 @@ class CLIPTrainer:
         self.model.to(self.device)
         print("EP:%d Model Saved on:" % epoch, output_path)
         return output_path
+    
+    def load(self, model_path):
+        self.model = torch.load(model_path)
+        self.model.to(self.device)
+        print("Model loaded from %s" % model_path)
