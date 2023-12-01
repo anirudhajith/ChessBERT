@@ -28,6 +28,8 @@ def evaluate(fen, candidate_moves, stockfish, k_levels):
 
     ranks = np.zeros(len(k_levels))
     rand_ranks = np.zeros(len(k_levels))
+    recall = np.zeros(len(k_levels))
+    rand_recall = np.zeros(len(k_levels))
 
     min_r = 101
     min_rand = 101
@@ -36,11 +38,17 @@ def evaluate(fen, candidate_moves, stockfish, k_levels):
         while c < k:
             min_r = min(min_r, legal_moves[c])
             min_rand = min(min_rand, random_moves[c])
+            
             c += 1
         ranks[i] = min_r
         rand_ranks[i] = min_rand
+        
+        if min_r == 0:
+            recall[i] = 1
+        if min_rand == 0:
+            recall[i] = 1
 
-    return ranks, rand_ranks
+    return ranks, rand_ranks, recall, rand_recall
     '''
     print("best " + str(best))
     print(len(moves))
@@ -59,14 +67,18 @@ def eval():
     
     trank = np.zeros(len(k_levels)) 
     trank_random = np.zeros(len(k_levels))
+    trecall = np.zeros(len(k_levels))
+    trecall_random = np.zeros(len(k_levels))
     count = 0
 
     with open("fens.txt", 'r') as f:
         for i, fen in enumerate(f):
             _, _, context_moves = fen_to_bag(fen, encoder, index, 64, piece_index)
-            rank, rank_random = evaluate(fen, context_moves, stockfish, k_levels)
+            rank, rank_random, recall, recall_random = evaluate(fen, context_moves, stockfish, k_levels)
             trank += rank
             trank_random += rank_random
+            trecall += recall
+            trecall_random += recall_random
             print(i)
             count += 1
 
@@ -74,10 +86,15 @@ def eval():
                 print(i)
                 print("Avg rank of retrieval: %s" % str(trank / count))
                 print("Avg rank of random: %s" % str(trank_random / count))
+                print("Avg recall of retrieval: %s" % str(trecall / count))
+                print("Avg recall of retrieval: %s" % str(trecall_random / count))
 
 
     print("Avg rank of retrieval: %s" % str(trank / count))
     print("Avg rank of random: %s" % str(trank_random / count))
+    print("Avg recall of retrieval: %s" % str(trecall / count))
+    print("Avg recall of retrieval: %s" % str(trecall_random / count))
+
 
 
 if __name__ == '__main__':
