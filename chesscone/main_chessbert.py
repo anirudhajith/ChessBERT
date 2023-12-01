@@ -2,13 +2,42 @@ import sys
 import pinecone
 import numpy as np
 import chess
-from utils import board_to_bitboard, encode_bitboard
 import random
 from multiprocessing import Pool, Manager
+import tensorflow as tf
+from ..chessbert_pytorch.get_prediction import get_prediction
 
 
 pinecone.init(api_key="38132697-8f87-4930-a355-376bd93394a3", environment="us-east4-gcp")
 index = pinecone.Index("chesspos-lichess-embeddings")
+
+model = None
+
+def encode_bitboard(query):
+    global model
+    if model is None:
+        model = tf.keras.models.load_model("model_encoder.h5")
+    embedding = model.predict_on_batch(query)
+    return np.asarray(embedding, dtype=np.float32)
+
+def board_to_bitboard(board):
+	embedding = np.array([], dtype=bool)
+	for color in [1, 0]:
+		for i in range(1, 7): # P N B R Q K / white
+			bmp = np.zeros(shape=(64,)).astype(bool)
+			for j in list(board.pieces(i, color)):
+				bmp[j] = True
+			embedding = np.concatenate((embedding, bmp))
+	additional = np.array([
+		bool(board.turn),
+		bool(board.castling_rights & chess.BB_A1),
+		bool(board.castling_rights & chess.BB_H1),
+		bool(board.castling_rights & chess.BB_A8),
+		bool(board.castling_rights & chess.BB_H8)
+	])
+	embedding = np.concatenate((embedding, additional))
+	return embedding
+
 
 def play_game(input):
     queue, game_count = input
@@ -36,16 +65,9 @@ def play_game(input):
             if randomHasMove:
                 move = random.choice(list(board.legal_moves))
             else:
-                bitboard = board_to_bitboard(board)
-                embedding = encode_bitboard(np.array([bitboard]))
-                results = index.query(vector=embedding.tolist(), top_k=30, include_metadata=True)
-                for result in results["matches"]:
-                    move = chess.Move.from_uci(result["metadata"]["move"])
-                    if move in board.legal_moves:
-                        foundLegalMoves += 1
-                        break
-                else:
-                    move = random.choice(list(board.legal_moves))
+                legal_moves = [move for move in board.legal_moves]
+                move_index = get_prediction(board.fen(), [move.uci() for move in legal_moves], model, index)
+                move = legal_moves[move_index]
 
             board.push(move)
             randomHasMove = not randomHasMove
@@ -59,26 +81,17 @@ if __name__ == '__main__':
     queue = manager.Queue()
     threading_list = []
     thread_count = 30
-    game_count = 10
-    with Pool(thread_count) as p:
-        r = p.map_async(play_game, [[queue, game_count]] * thread_count)
-
-        while not r.ready() or not r.successful() or queue.empty() == False:
-            try:
-                result = queue.get(timeout=10)
-            except:
-                continue
-            # print to stderror so that it doesn't interfere with the output
-            print(".", file=sys.stderr)
-            if result == "chesscone":
-                chesscone_wins += 1
-            elif result == "random":
-                random_wins += 1
-            else:
-                ties += 1
-        
-        r.wait()
-
+    game_count = 1
+    play_game([queue, game_count])
+    while queue.empty() == False:
+        result = queue.get()
+        # print to stderror so that it doesn't interfere with the output
+        if result == "chesscone":
+            chesscone_wins += 1
+        elif result == "random":
+            random_wins += 1
+        else:
+            ties += 1
 
     # Print statistics
     print("Chesscone wins:", chesscone_wins)

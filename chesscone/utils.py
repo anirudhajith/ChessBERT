@@ -2,11 +2,14 @@ import numpy as np
 import chess
 import tensorflow as tf
 
-model = tf.keras.models.load_model("model_encoder.h5")
+model = None
 
 def encode_bitboard(query):
-	embedding = model.predict_on_batch(query)
-	return np.asarray(embedding, dtype=np.float32)
+    global model
+    if model is None:
+        model = tf.keras.models.load_model("model_encoder.h5")
+    embedding = model.predict_on_batch(query)
+    return np.asarray(embedding, dtype=np.float32)
 
 def board_to_bitboard(board):
 	embedding = np.array([], dtype=bool)
