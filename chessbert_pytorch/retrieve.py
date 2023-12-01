@@ -46,7 +46,8 @@ def evaluate(fen, candidate_moves, stockfish, k_levels):
         if min_r == 0:
             recall[i] = 1
         if min_rand == 0:
-            recall[i] = 1
+            rand_recall[i] = 1
+
 
     return ranks, rand_ranks, recall, rand_recall
     '''
@@ -87,13 +88,13 @@ def eval():
                 print("Avg rank of retrieval: %s" % str(trank / count))
                 print("Avg rank of random: %s" % str(trank_random / count))
                 print("Avg recall of retrieval: %s" % str(trecall / count))
-                print("Avg recall of retrieval: %s" % str(trecall_random / count))
+                print("Avg recall of random: %s" % str(trecall_random / count))
 
 
     print("Avg rank of retrieval: %s" % str(trank / count))
     print("Avg rank of random: %s" % str(trank_random / count))
     print("Avg recall of retrieval: %s" % str(trecall / count))
-    print("Avg recall of retrieval: %s" % str(trecall_random / count))
+    print("Avg recall of random: %s" % str(trecall_random / count))
 
 
 

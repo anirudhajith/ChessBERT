@@ -12,15 +12,16 @@ from dataset import ChessDataset, collate_fn, utils
 from model import ChessBERT, MaskedChessModel
 
 
-MODEL_PATH = "/scratch/gpfs/aa8052/ChessBERT/chessbert_pytorch/..ep6"
+MODEL_PATH = "/home/david/Masters/VectorCOS597A/model.ep6"
 K = 4
-PIECE_INDEX_PATH = "/scratch/gpfs/aa8052/ChessBERT/chessbert_pytorch/dataset/preprocessing/piece_index.json"
+PIECE_INDEX_PATH = "dataset/preprocessing/piece_index.json"
 
 with open(PIECE_INDEX_PATH, "r") as f:
     piece_index = json.load(f)
 
 print("Loading MaskedChessModel")
 model = torch.load(MODEL_PATH)
+model.to('cuda')
 model.eval()
 
 def get_prediction(current_fen, legal_move_ucis, encoder, index) -> int:
@@ -32,8 +33,9 @@ def get_prediction(current_fen, legal_move_ucis, encoder, index) -> int:
     :return: index of the best move among legal moves
     """
     x, ys, _ = utils.fen_to_bag(current_fen, encoder, index, K, piece_index, legal_move_ucis)
-    x.to("cuda")
-    torch.tensor(ys).to("cuda") # (num_legal_moves, 4)
+    x = torch.from_numpy(x).unsqueeze(0)
+    x = x.to("cuda")
+    ys= torch.from_numpy(ys).to("cuda") # (num_legal_moves, 4)
     options = model.chessbert.embedding(ys.unsqueeze(0).to(torch.long)).squeeze(0) # (num_legal_moves, hidden)
     model_prediction = model.forward(x) # (1, hidden)
     logits = torch.mm(model_prediction, options.t()) # (1, num_legal_moves)

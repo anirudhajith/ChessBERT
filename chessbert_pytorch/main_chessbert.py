@@ -5,16 +5,12 @@ import chess
 import random
 from multiprocessing import Pool, Manager
 import tensorflow as tf
-from ..chessbert_pytorch.get_prediction import get_prediction
+from get_prediction import get_prediction
 
 
-pinecone.init(api_key="38132697-8f87-4930-a355-376bd93394a3", environment="us-east4-gcp")
-index = pinecone.Index("chesspos-lichess-embeddings")
 
-model = None
 
 def encode_bitboard(query):
-    global model
     if model is None:
         model = tf.keras.models.load_model("model_encoder.h5")
     embedding = model.predict_on_batch(query)
@@ -40,7 +36,14 @@ def board_to_bitboard(board):
 
 
 def play_game(input):
+    pinecone.init(api_key="38132697-8f87-4930-a355-376bd93394a3", environment="us-east4-gcp")
+    index = pinecone.Index("chesspos-lichess-embeddings")
+    model = tf.keras.models.load_model("dataset/preprocessing/model_encoder.h5")
+
     queue, game_count = input
+    tie_count = 0
+    w_count = 0
+    l_count = 0
     for _ in range(game_count):
         print("Starting game")
         randomHasMove = random.random() < 0.5  # Is it the random player's turn?
@@ -54,12 +57,15 @@ def play_game(input):
                 if board.is_stalemate() or board.is_insufficient_material() or board.is_seventyfive_moves():
                     print("Tie!", end=" ")
                     queue.put("tie")
+                    tie_count += 1
                 else:
                     print("Chesscone" if randomHasMove else "Random", "wins!", end=" ")
                     if randomHasMove:
                         queue.put("chesscone")
+                        w_count += 1
                     else:
                         queue.put("random")
+                        l_count += 1
                 print("Found", foundLegalMoves, "legal moves out of", board.fullmove_number, "moves")
                 break
             if randomHasMove:
@@ -71,6 +77,7 @@ def play_game(input):
 
             board.push(move)
             randomHasMove = not randomHasMove
+        print("%d - %d - %d\n" % (w_count, l_count, tie_count))
 
 if __name__ == '__main__':
     chesscone_wins = 0
@@ -81,7 +88,7 @@ if __name__ == '__main__':
     queue = manager.Queue()
     threading_list = []
     thread_count = 30
-    game_count = 1
+    game_count = 100
     play_game([queue, game_count])
     while queue.empty() == False:
         result = queue.get()

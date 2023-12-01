@@ -62,8 +62,10 @@ def array_to_y(array, piece_index, segment_id, uci_moves):
                 counts[piece] += 1
 
     out = []
-    for i in range(len(uci_moves)):
-        out.append(moves[(uci_moves[i][0], uci_moves[i][1])])
+    for i in range(len(uci_num)):
+        out.append(moves[(uci_num[i][0], uci_num[i][1])])
+
+    out = np.vstack(out)
     return out
 
 def array_to_bag(array, piece_index, segment_id):
