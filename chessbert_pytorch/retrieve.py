@@ -91,23 +91,25 @@ def eval():
             _, move_indexes = get_prediction_model(board.fen(), uci_moves, encoder, index, model)
 
             real_moves = []
-            for j in range(len(move_indexes)):
-                real_moves.append(uci_moves[move_indexes[j]])
+            
+            if len(move_indexes) > 0:
+                for j in range(len(move_indexes)):
+                    real_moves.append(uci_moves[move_indexes[j]])
 
-            rank, rank_random, recall, recall_random = evaluate(fen, real_moves, stockfish, k_levels)
-            trank += rank
-            trank_random += rank_random
-            trecall += recall
-            trecall_random += recall_random
-            print(i)
-            count += 1
-
-            if i % 50 == 0:
+                rank, rank_random, recall, recall_random = evaluate(fen, real_moves, stockfish, k_levels)
+                trank += rank
+                trank_random += rank_random
+                trecall += recall
+                trecall_random += recall_random
                 print(i)
-                print("Avg rank of retrieval: %s" % str(trank / count))
-                print("Avg rank of random: %s" % str(trank_random / count))
-                print("Avg recall of retrieval: %s" % str(trecall / count))
-                print("Avg recall of random: %s" % str(trecall_random / count))
+                count += 1
+
+                if i % 50 == 0:
+                    print(i)
+                    print("Avg rank of retrieval: %s" % str(trank / count))
+                    print("Avg rank of random: %s" % str(trank_random / count))
+                    print("Avg recall of retrieval: %s" % str(trecall / count))
+                    print("Avg recall of random: %s" % str(trecall_random / count))
 
 
     print("Avg rank of retrieval: %s" % str(trank / count))
