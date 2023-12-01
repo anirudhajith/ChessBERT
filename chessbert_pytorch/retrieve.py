@@ -7,7 +7,7 @@ from dataset.utils import *
 import pinecone
 import tensorflow as tf
 
-def evaluate(fen, candidate_moves, stockfish):
+def evaluate(fen, candidate_moves, stockfish, k_levels):
     stockfish.set_fen_position(fen)
     moves = stockfish.get_top_moves(100)
 
@@ -15,12 +15,32 @@ def evaluate(fen, candidate_moves, stockfish):
     for i, move in enumerate(moves):
         stockfish_moves[move['Move']] = i
 
-    best = -1
+    legal_moves = []
+    random_moves  = []
     for i, move in enumerate(candidate_moves):
         if move in stockfish_moves: 
-            best = stockfish_moves[move]
-            break
+            legal_moves.append(stockfish_moves[move])
+            random_moves.append(random.randrange(0, len(moves)))
 
+    while len(legal_moves) < k_levels[-1]:
+        legal_moves.append(random.randrange(0, len(moves)))
+        random_moves.append(random.randrange(0, len(moves)))
+
+    ranks = np.zeros(len(k_levels))
+    rand_ranks = np.zeros(len(k_levels))
+
+    min_r = 101
+    min_rand = 101
+    c = 0
+    for i, k in enumerate(k_levels):
+        while c < k:
+            min_r = min(min_r, legal_moves[c][1])
+            min_rand = min(min_rand, random_moves[c][1])
+            c += 1
+        ranks[i] = min_r
+        rand_ranks[i] = min_rand
+
+    return ranks, rand_ranks
     '''
     print("best " + str(best))
     print(len(moves))
@@ -38,9 +58,11 @@ def eval():
     index = pinecone.Index('chesspos-lichess-embeddings')
     piece_index = json.load(open("dataset/preprocessing/piece_index.json", 'r'))
     encoder = tf.keras.models.load_model("dataset/preprocessing/model_encoder.h5")
+
+    k_levels = [1,3,5,10]
     
-    trank = 0 
-    trank_random = 0
+    tranks = np.zeros(len(k_levels)) 
+    trank_random = np.zeros(len(k_levels))
     count = 0
 
     with open("fens.txt", 'r') as f:
