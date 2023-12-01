@@ -26,6 +26,46 @@ def collate_fn(batch):
 def isBlack(r, f):
     return (r+1) % 2 == f % 2
 
+def array_to_y(array, piece_index, segment_id, uci_moves):
+    board = array[:64]
+    additional = array[64:69]
+    move = array[-4:]
+    board = board.reshape((8,8))
+
+    uci_num = []
+    for uci in uci_moves:
+        uci_num.append([ord(uci[0])- ord('a'), int(uci[1]) - 1, ord(uci[2]) - ord('a'), int(uci[3]) - 1])
+        
+
+    moves = {}
+    for uci in uci_moves:
+        numerical = np.array([ord(uci[0])- ord('a'), int(uci[1]) - 1, ord(uci[2]) - ord('a'), int(uci[3]) - 1])
+        moves[(numerical[0], numerical[1])] = np.array([-1, numerical[2], numerical[3], segment_id + 1])
+
+
+    counts = defaultdict(lambda: 0)
+    #board position is j, i
+    #White biship is index 5
+    for i in range(8):
+        for j in range(8):
+            piece = int(board[i][j])
+            if piece != 0:
+                base = piece_index[str(piece)]
+
+                if abs(piece) != 3:
+                    ind = base + counts[piece]
+                else:
+                    ind = base + isBlack(j,i)
+
+                if (j,i) in moves:
+                    moves[(j,i)][0] = ind
+                counts[piece] += 1
+
+    out = []
+    for i in range(len(uci_moves)):
+        out.append(moves[(uci_moves[i][0], uci_moves[i][1])])
+    return out
+
 def array_to_bag(array, piece_index, segment_id):
     board = array[:64]
     additional = array[64:69]
@@ -62,7 +102,7 @@ def array_to_bag(array, piece_index, segment_id):
 
 #for inference only
 #returns bag format and context moves 
-def fen_to_bag(fen, encoder, index, k, piece_index):
+def fen_to_bag(fen, encoder, index, k, piece_index, uci = None):
     board = chess.Board(fen)
     
     arr = board_to_array(board)
@@ -89,17 +129,19 @@ def fen_to_bag(fen, encoder, index, k, piece_index):
     data = np.concatenate((np.vstack(context), arr.reshape((1, -1))), axis=0)
 
     x = []
-    rights = []
     s = 0
+    ys = None
     for i in range(len(data)):
         bag, add = array_to_bag(data[i], piece_index, i*2 + 1)
         
         s += len(bag)
         x.append(bag)
-        rights.append(add)
 
         if i != len(data) - 1:
             x.append(np.array([[33, 0,0,0]]))
+
+        if i == len(data) - 1 and uci is not None:
+            ys = array_to_y(data[i], piece_index, i*2 + 1, uci)
     
     truth = x[-1][-1]
     y = truth.copy()
@@ -109,7 +151,6 @@ def fen_to_bag(fen, encoder, index, k, piece_index):
     truth[2] = 0
 
     x = np.concatenate(x, axis = 0) # (len_seq, 4)
-    rights = np.vstack(rights) # (9, 5)
 
-    return x, rights, context_moves
+    return x, ys, context_moves
 
