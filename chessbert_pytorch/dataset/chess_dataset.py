@@ -25,8 +25,8 @@ class ChessDataset(Dataset):
         rights = []
         s = 0
         for i in range(len(data)):
-            if return_context or i == len(data) - 1:
-                bag, add = array_to_bag(data[i], self.piece_index, i*2 + 1)
+            if self.return_context or i == len(data) - 1:
+                bag, add = array_to_bag(data[i], self.piece_index, len(x)*2 + 1)
             
                 s += len(bag)
                 x.append(bag)
@@ -34,7 +34,7 @@ class ChessDataset(Dataset):
 
                 if i != len(data) - 1:
                     x.append(self.sep_token.copy())
-        
+     
         truth = x[-1][-1]
         y = truth.copy()
 
@@ -44,5 +44,4 @@ class ChessDataset(Dataset):
 
         x = np.concatenate(x, axis = 0) # (len_seq, 4)
         rights = np.vstack(rights) # (9, 5)
-
         return x, rights, y

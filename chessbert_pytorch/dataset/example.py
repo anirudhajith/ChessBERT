@@ -1,10 +1,10 @@
 import torch
 
 from torch.utils.data.dataloader import DataLoader
-from chess_dataset import ChessDataset
-from utils import *
+from dataset.chess_dataset import ChessDataset
+from dataset.utils import *
 
-data = ChessDataset("preprocessing/data/data.hdf5", "preprocessing/piece_index.json")
+data = ChessDataset("dataset/preprocessing/data/data.hdf5", "dataset/preprocessing/piece_index.json", return_context = False)
 train_loader = DataLoader(data, batch_size = 8, shuffle=True, collate_fn = collate_fn)
 
 for i, (x, add, y) in enumerate(train_loader):
