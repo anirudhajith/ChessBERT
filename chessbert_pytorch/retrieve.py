@@ -62,13 +62,12 @@ def evaluate(fen, candidate_moves, stockfish, k_levels):
 def eval():
     stockfish = Stockfish("/home/david/Masters/VectorCOS597A/stockfish/stockfish-ubuntu-x86-64-avx2")
 
-    pinecone.init(api_key = '38132697-8f87-4930-a355-376bd93394a3', environment = "us-east4-gcp")
     index = pinecone.Index('chesspos-lichess-embeddings')
     piece_index = json.load(open("dataset/preprocessing/piece_index.json", 'r'))
     encoder = tf.keras.models.load_model("dataset/preprocessing/model_encoder.h5")
 
 
-    MODEL_PATH = "/home/david/Masters/VectorCOS597A/model.ep6"
+    MODEL_PATH = "/home/david/Masters/VectorCOS597A/no_context_model.ep6"
     K = 4
     print("Loading MaskedChessModel")
     model = torch.load(MODEL_PATH)

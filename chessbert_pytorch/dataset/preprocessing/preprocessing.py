@@ -20,7 +20,6 @@ def pgn_to_positions(pgn_file, save_file, progress_file, encoder_file, embedding
     game_index = -1
     num_context = 4
     dim = 64 + 5 + 4
-    pinecone.init(api_key = '38132697-8f87-4930-a355-376bd93394a3', environment = "us-east4-gcp")
     index = pinecone.Index('chesspos-lichess-embeddings')
 
     encoder = tf.keras.models.load_model(encoder_file)
