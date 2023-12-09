@@ -5,7 +5,7 @@ from utils import board_to_bitboard, encode_bitboard
 import random
 import chess.svg
 
-pinecone.init(api_key="38132697-8f87-4930-a355-376bd93394a3", environment="us-east4-gcp")
+pinecone.init(api_key="REDACTED", environment="us-east4-gcp")
 index = pinecone.Index("chesspos-lichess-embeddings")
 
 chesscone_wins = 0
