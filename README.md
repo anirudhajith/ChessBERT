@@ -11,3 +11,19 @@ Contains implementation for Chesscone, a very simple retrieval-based chess engin
 
 ### dataset_setup/:
 Notebooks for downloading the dataset, filtering it, embedding and uploading to Pinecone.
+
+
+# Dependencies
+Dependencies include: 
+- numpy, 
+- pinecone,
+- tqdm,
+- python-chess,
+- pytorch,
+- tensorflow,
+- zstandard, 
+- h5py,
+
+
+# Authors
+This project was created by Anirudh Ajith, Gudni Nathan Gunnarsson, David Xu.
