@@ -164,7 +164,6 @@ if __name__ == '__main__':
     progress_dir = sys.argv[3]
     encoder_file = sys.argv[4]
 
-    pinecone.init(api_key="38132697-8f87-4930-a355-376bd93394a3", environment="us-east4-gcp")
     index = pinecone.Index("chesspos-lichess-embeddings")
 
 

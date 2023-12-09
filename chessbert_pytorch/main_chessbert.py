@@ -36,7 +36,6 @@ def board_to_bitboard(board):
 
 
 def play_game(input):
-    pinecone.init(api_key="38132697-8f87-4930-a355-376bd93394a3", environment="us-east4-gcp")
     index = pinecone.Index("chesspos-lichess-embeddings")
     model = tf.keras.models.load_model("dataset/preprocessing/model_encoder.h5")
 
