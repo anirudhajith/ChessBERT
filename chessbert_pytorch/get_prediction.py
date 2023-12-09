@@ -12,7 +12,7 @@ from dataset import ChessDataset, collate_fn, utils
 from model import ChessBERT, MaskedChessModel
 
 
-MODEL_PATH = "/home/david/Masters/VectorCOS597A/model.ep6"
+MODEL_PATH = "/home/david/Masters/VectorCOS597A/no_context_model.ep6"
 K = 4
 PIECE_INDEX_PATH = "dataset/preprocessing/piece_index.json"
 
@@ -39,7 +39,7 @@ def get_prediction(current_fen, legal_move_ucis, encoder, index) -> int:
     options = model.chessbert.embedding(ys.unsqueeze(0).to(torch.long)).squeeze(0) # (num_legal_moves, hidden)
     model_prediction = model.forward(x) # (1, hidden)
     logits = torch.mm(model_prediction, options.t()) # (1, num_legal_moves)
-    return torch.argmax(logits, dim=1).item(), torch.argsort(logits, dim=1).squeeze().numpy()
+    return torch.argmax(logits, dim=1).item(), torch.argsort(logits, dim=1).squeeze().cpu().numpy()
 
 def get_prediction_model(current_fen, legal_move_ucis, encoder, index, model, K=4) -> int:
     """

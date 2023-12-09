@@ -68,7 +68,7 @@ def eval():
     encoder = tf.keras.models.load_model("dataset/preprocessing/model_encoder.h5")
 
 
-    MODEL_PATH = "/home/david/Masters/VectorCOS597A/model.ep6"
+    MODEL_PATH = "/home/david/Masters/VectorCOS597A/no_context_model.ep6"
     K = 4
     print("Loading MaskedChessModel")
     model = torch.load(MODEL_PATH)
